@@ -121,8 +121,6 @@ class _MusicListViewState extends State<MusicListView> {
                     } else {
                       stop(audioPlugin, playerState);
                       play(audioPlugin, playerState, localSongsPaths[index]);
-                      debugPrint("Duration");
-                      debugPrint(audioPlugin.duration.toString());
                       setState(() {
                         _currentIndex = index;
                         isPlaying = true;
@@ -248,12 +246,21 @@ class MusicSeekBar extends StatefulWidget {
 }
 
 class _MusicSeekBarState extends State<MusicSeekBar> {
+  Future<void> play(audioPlayer, playerState, path) async {
+    await audioPlayer.play(path);
+  }
+
+
+  Future<void> pause(audioPlayer, playerState) async {
+    await audioPlayer.pause();
+  }
+
+  Future<void> stop(audioPlayer, playerState) async {
+    await audioPlayer.stop();
+  }
+
   @override
   void initState() {
-    setState(() {
-      var tempDuration = audioPlugin.duration.toString();
-      print(tempDuration);
-    });
     _resumeProgressTimer();
     super.initState();
   }
@@ -261,12 +268,45 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
   _resumeProgressTimer() {
     _progressTimer = Timer.periodic(const Duration(milliseconds: 1000), (_) {
       setState(() {
-        _currentTime += 1;
+        var tempDuration = audioPlugin.duration.toString();
+        var position;
+        var duration;
+//        _totalDuration = double.parse(tempDuration.split(":").last);
+        audioPlugin.onAudioPositionChanged.listen((p){
+          setState(() {
+            position = p;
+            var tempPositions = position.toString().split(":");
+            var tempPosition = tempPositions[1] + tempPositions.last.split(".")
+                .first.toString();
+            _currentTime = double.parse(tempPosition);
+          });
+        });
+        audioPlugin.onPlayerStateChanged.listen((s) {
+          if(s == AudioPlayerState.PLAYING) {
+            setState(() {
+              var tempDuration = audioPlugin.duration.toString();
+              var tempDurations = tempDuration.split(":");
+              var sumDurations = tempDurations[1] + tempDurations.last.split(".").first.toString();
+              _totalDuration = double.parse(sumDurations);
+            });
+          } else if (s == AudioPlayerState.STOPPED) {
+            setState(() {
+              position = duration;
+            });
+          }
+        });
+      });
+
+      setState(() {
+//        _currentTime += 1;
 
         if (_currentTime >= _totalDuration) {
-          _currentTime = _totalDuration;
+          setState(() {
+            _currentTime = _totalDuration;
+            isPlaying = false;
+          });
           _progressTimer.cancel();
-          isPlaying = false;
+
         }
       });
     });
@@ -289,7 +329,27 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
         }
       },
       onProgressChanged: (value) {
-        _currentTime = value * _totalDuration;
+//        if(value>=0.99){
+//          setState(() {
+//            isPlaying = false;
+//          });
+//          if (_currentIndex == _maxIndexes) {
+//            setState(() {
+//              _currentIndex++;
+//            });
+//          } else {
+//            setState(() {
+//              _currentIndex = 0;
+//            });
+//          }
+//          play(audioPlugin, playerState, _currentIndex);
+//        }
+        pause(audioPlugin, playerState);
+        setState(() {
+          _currentTime = value * _totalDuration;
+          audioPlugin.seek(_currentTime);
+        });
+        play(audioPlugin, playerState, localSongsPaths[_currentIndex]);
       },
       onStopTrackingTouch: () {
         if (isPlaying) {
