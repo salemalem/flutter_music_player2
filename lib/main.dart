@@ -348,6 +348,7 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
         setState(() {
           _currentTime = value * _totalDuration;
           audioPlugin.seek(_currentTime);
+          isPlaying = true;
         });
         play(audioPlugin, playerState, localSongsPaths[_currentIndex]);
       },
